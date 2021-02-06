@@ -1,0 +1,206 @@
+Задание 1:
+
+Пример - есть расписания поставщиков заданное видом ДДННССВВ, 
+где Д - дневная смена, Н - ночная смена, С - суточная смена, В - выходной
+
+Считать что дневная смена с 08:00 по 20:00 
+Считать что ночная смена с 20:00 по 08:00 
+Считать что суточная смена с 08:00 по 08:00 завтрашнего дня
+
+Описание работы расписания ДНСВ: 
+1 день - Д дневная смена 
+2 день - Н ночная смена 
+3 день - С суточная смена 
+4 день - В выходной день 
+5 день - Д дневная смена и т.д. циклично
+
+Создать таблицу (T_CONTRACTOR_SHERULER) под расписание и заполнить его с файла schedulers.csv. 
+(Использовать любую библиотеку для заливки в СУБД (как вариант MS SQL)) Таблицу следует нормализовать.
+
+ID_NAME - идентификтор поставщика
+NAME - название поставщика
+SHEDULE - расписание
+DATE_BEGIN - дата начала действия расписания
+DATE_END - дата окончания действия расписания
+Пример записи без нормализации:
+
+Поставщик 1 ДВС 01.01.2019 04.01.2019
+Поставщик 2 НВС 05.01.2019 31.12.2019
+
+Вводные:
+Связку полей FIO, DATE_BEGIN считать уникальной.
+DATE_BEGIN не может привышать DATE_END.
+Можете продемонстрировать работу с ключами/ограничениями.
+
+
+Создание таблиц
+CREATE TABLE T_contractor_scheduler (
+    provider_id INT NOT NULL,
+    schedule_id INT NOT NULL,
+    date_start DATETIME NOT NULL,
+    date_finish DATETIME NOT NULL,
+    CONSTRAINT check_date_start CHECK (DATEDIFF(date_finish, date_start) > 0),
+    FOREIGN KEY (provider_id)
+        REFERENCES t_provider (id)
+        ON DELETE CASCADE,
+    PRIMARY KEY (provider_id , date_start)
+
+CREATE TABLE T_provider (
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` VARCHAR(45) NOT NULL UNIQUE);
+
+CREATE TABLE T_schedule (
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `type` VARCHAR(15) NOT NULL UNIQUE);
+
+Добавление данных в таблицы
+INSERT INTO T_provider (`name`) VALUES ('Поставщик 1');
+INSERT INTO T_provider (`name`) VALUES ('Поставщик 2');
+INSERT INTO T_provider (`name`) VALUES ('Поставщик 3');
+
+INSERT INTO T_schedule (`type`) VALUES ('дддвсвнн');
+INSERT INTO T_schedule (`type`) VALUES ('ннвннв');
+INSERT INTO T_schedule (`type`) VALUES ('св');
+INSERT INTO T_schedule (`type`) VALUES ('свсвсв');
+INSERT INTO T_schedule (`type`) VALUES ('днвсв');
+INSERT INTO T_schedule (`type`) VALUES ('ннддвсв');
+INSERT INTO T_schedule (`type`) VALUES ('нвнвнв');
+INSERT INTO T_schedule (`type`) VALUES ('двдвдвдв');
+
+INSERT INTO T_contractor_scheduler (provider_id, schedule_id, date_start, date_finish) VALUES (1, 1, '2019-01-01 00:00', '2019-01-10 00:00');
+INSERT INTO T_contractor_scheduler (provider_id, schedule_id, date_start, date_finish) VALUES (1, 2, '2019-01-11 00:00', '2019-01-15 00:00');
+INSERT INTO T_contractor_scheduler (provider_id, schedule_id, date_start, date_finish) VALUES (1, 3, '2019-01-16 00:00', '2019-01-20 00:00');
+INSERT INTO T_contractor_scheduler (provider_id, schedule_id, date_start, date_finish) VALUES (2, 4, '2019-01-01 00:00', '2019-01-07 00:00');
+INSERT INTO T_contractor_scheduler (provider_id, schedule_id, date_start, date_finish) VALUES (2, 5, '2019-01-08 00:00', '2019-01-14 00:00');
+INSERT INTO T_contractor_scheduler (provider_id, schedule_id, date_start, date_finish) VALUES (2, 6, '2019-01-15 00:00', '2019-12-31 00:00');
+INSERT INTO T_contractor_scheduler (provider_id, schedule_id, date_start, date_finish) VALUES (3, 7, '2019-01-01 00:00', '2019-02-01 00:00');
+INSERT INTO T_contractor_scheduler (provider_id, schedule_id, date_start, date_finish) VALUES (3, 8, '2019-02-02 00:00', '2019-12-31 00:00');
+
+Задание 2.
+
+Создать таблицу (T_CONTRACTOR_WORK_DAY) выходов на работу сотрудников.
+Таблица должна иметь следующий вид
+
+ID - идентификатор записи
+NAME - название поставщика
+DATE_BEGIN - Начало рабочего дня (datetime)
+DATE_END - Конец рабочего дня (datetime)
+CREATE TABLE T_contractor_work_day (id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, name` VARCHAR(45) NOT NULL,
+    date_start DATETIME NOT NULL, date_finish DATETIME NOT NULL);
+
+
+Задание 3.
+
+Создать процедуру расчета рабочих дней.
+
+Входящие параметры:
+
+Дата начала периода расчета
+Дата окончания периода расчета.
+Ожидаемый результать выполнения хранимой процедуры - заполнение таблицы T_CONTRACTOR_WORK_DAY рабочими днями согласно расписания работы поставщиков из таблицы T_CONTRACTOR_SHERULER Выходные дни (В) не должны попадать в таблицу T_CONTRACTOR_WORK_DAY
+
+Пример выполнения для Поставщика 1 (Из примера записи таблицы T_CONTRACTOR_SHERULER) с параметрами '01.01.2019' - '08.01.2019' таблица T_CONTRACTOR_WORK_DAY заполнится следующими данными:
+
+1 Поставщик 1 01.01.2019 08:00 01.01.2019 20:00
+2 Поставщик 1 03.01.2019 08:00 04.01.2019 08:00
+3 Поставщик 1 04.01.2019 08:00 04.01.2019 08:00
+4 Поставщик 1 05.01.2019 20:00 06.01.2019 08:00
+5 Поставщик 1 07.01.2019 08:00 08.01.2019 08:00
+6 Поставщик 1 08.01.2019 20:00 09.01.2019 08:00
+Пояснение: для записей с 01.01.2019 по 04.01.2019 берется расписание ДВС
+
+1 - Д - дневная смена далее следует выходной В - запись о выходном дне не попадает в таблицу
+2 - С - суточная смена
+3 - расписание закончилось, поэтому оно циклично начинается с начала (Д - дневная смена)
+4 - С 05.01.2019 начинает действовать новое расписание - НВС берется Н - ночная смена далее следует выходной В - запись о выходном дне не попадает в таблицу
+5 - С - суточная смена
+6 - Снова Н - ночная смена
+
+CREATE TABLE T_work_mode (type` CHAR(1) NOT NULL PRIMARY KEY,time_start TIME NOT NULL,duration TIME NOT NULL);
+
+INSERT INTO T_work_mode (`type`, time_start, duration) VALUES ('д', '08:00:00', '12:00:00');
+INSERT INTO T_work_mode (`type`, time_start, duration) VALUES ('н', '20:00:00', '12:00:00');
+INSERT INTO`T_work_mode (`type`, time_start, duration) VALUES ('с', '08:00:00', '24:00:00');
+
+DELIMITER $$
+CREATE PROCEDURE add_contractor_work_days (IN date_start DATETIME, IN date_finish DATETIME)
+BEGIN
+	DECLARE provider_name VARCHAR(45);
+    DECLARE schedule_type VARCHAR(15);
+    DECLARE date_start_ DATETIME;
+    DECLARE date_finish_ DATETIME;
+    DECLARE date_from DATETIME;
+	DECLARE date_until DATETIME;
+    DECLARE date_current DATETIME;
+    DECLARE schedule_length INT;
+    DECLARE counter INT;
+    DECLARE work_mode_type CHAR(1);
+    DECLARE work_time_begin TIME;
+    DECLARE work_time_duration TIME;
+    DECLARE work_datetime_start DATETIME;
+	DECLARE is_finished BOOL DEFAULT FALSE;
+
+    DECLARE scheduler_cursor CURSOR FOR
+		SELECT * FROM (SELECT `name` AS provider_name, `type` AS schedule_type, date_start, date_begin
+				FROM t_provider AS p
+				INNER JOIN T_contractor_scheduler AS T_c_scheduler
+				ON p.id = T_c_scheduler.provider_id
+				INNER JOIN T_schedule AS s
+				ON  schedule_id = s.id) AS t
+		WHERE date_begin <= date_finish AND date_start <= date_end;
+
+	DECLARE CONTINUE HANDLER
+    FOR NOT FOUND SET is_finished = TRUE;
+   OPEN scheduler_cursor;
+   get_schedule: LOOP
+		FETCH scheduler_cursor
+        INTO provider_name, schedule_type, date_start_, date_finish_;
+        IF is_finished = TRUE THEN LEAVE get_schedule;
+		END IF;
+        SET date_from = IF (date_begin > date_start_, date_begin, date_start_);
+        SET date_until = IF (date_finish < date_end_, date_finish, date_end_);
+        SET date_current = date_from;
+        SET schedule_length = CHAR_LENGTH(schedule_type);
+        SET counter = 0;
+        add_work_day: REPEAT
+			SET work_mode_type = SUBSTR(schedule_type, counter % schedule_length + 1, 1);
+			IF work_mode_type != 'в' THEN
+				SELECT time_start, duration
+                FROM t_work_mode WHERE `type` = work_mode_type
+                INTO work_time_start, work_time_duration;
+                IF work_time_start IS NOT NULL THEN
+					SET work_datetime_begin = ADDTIME(date_current, work_time_start);
+					INSERT INTO T_contractor_work_day (name`, date_start, date_finish)
+					VALUES (provider_name, work_datetime_start, ADDTIME(work_datetime_start, work_time_duration));
+				ELSE
+					SELECT 'Unknown work mode' AS 'Work mode error';
+				END IF;
+			END IF;
+            SET counter = counter + 1;
+            SET date_current = DATE_ADD(date_current, INTERVAL 1 DAY);
+		UNTIL date_current > date_until
+        END REPEAT;
+   END LOOP;
+   CLOSE scheduler_cursor;
+END$$
+DELIMITER ;
+
+Задание 4
+
+С помощью SQL запросов:
+
+1. Сделать выборку содержащую сколько рабочих дней было у каждого поставщика
+2. Сделать выборку поставщиков, у которыйх было больше 10 рабочих дней за январь 2019 года
+3. Сделать выборку поставщиков, кто работал 14, 15 и 16 января 2019 года
+
+SELECT name`, COUNT(*) AS count FROM T_contractor_work_day GROUP BY `name`;
+
+SELECT`name`FROM (SELECT name`, COUNT(*) AS count FROM T_contractor_work_day
+    WHERE MONTH(date_start) = 1 AND YEAR(date_start) = 2019 GROUP BY `name`) AS T WHERE T.count > 10;
+
+SELECT DISTINCT name`FROM T_contractor_work_day WHERE MONTH(date_start) = 1 AND YEAR(date_start) = 2019
+    AND DAY(date_start) = 14 OR DAY(date_start) = 15 OR DAY(date_start) = 16;
+
+
+
+
